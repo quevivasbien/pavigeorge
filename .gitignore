@@ -1,0 +1,5 @@
+*.csv
+*.dta
+*.txt
+!applicant_data.csv
+!employer_data.csv
