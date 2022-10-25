@@ -99,8 +99,8 @@ df_app.rename(
     inplace = True
 )
 
-df_app['promote3_statement1'] = (df_app['promote3'] == 1).astype(int)
-df_app['promote3_statement2'] = (df_app['promote3'] == 2).astype(int)
+df_app['promote3_attentive'] = (df_app['promote3'] == 1).astype(int)
+df_app['promote3_boastful'] = (df_app['promote3'] == 2).astype(int)
 
 # %%
 # convert employer data to form where it can be analyzed easily
@@ -179,8 +179,8 @@ for i, row in df_emp.iterrows():
             'promote_type_seen': promote_type_seen,
             'app_promote1': app_row['promote1'],
             'app_promote2': app_row['promote2'],
-            'app_promote3_statement1': app_row['promote3_statement1'],
-            'app_promote3_statement2': app_row['promote3_statement2'],
+            'app_promote3_attentive': app_row['promote3_attentive'],
+            'app_promote3_boastful': app_row['promote3_boastful'],
             'app_eval_correct': app_row['eval_correct'],
             'bid': bid
         })
@@ -197,13 +197,13 @@ df_bids.to_csv('employer_wage_bids.csv')
 variable_labels = {
     'applicant': 'id of applicant being bid on',
     'treatment': 'treatment group for employer and applicant',
-    'emp_is_female': 'binary indicator for employer\'s gender',
-    'app_is_female': 'binary indicator for applicant\'s gender',
+    'emp_is_female': 'employer\'s gender, 1 iff employer is female',
+    'app_is_female': 'applicant\'s gender, 1 iff applicant is female',
     'promote_type_seen': 'the self-promotion type seen by the employer in making this wage bid',
     'app_promote_1': 'applicant\'s choice for first self-promotion type',
     'app_promote_2': 'applicant\'s choice for second self-promotion type',
-    'app_promote_3_statement_1': 'binary indicator for whether applicant chose first self-promotion statement (attentive self-description) for third self-promotion type',
-    'app_promote_3_statement_2': 'binary indicator for whether applicant chose second self-promotion statement (self-description of being the best) for third self-promotion type',
+    'app_promote_3_attentive': 'whether applicant chose attentive self-description for third self-promotion type',
+    'app_promote_3_boastful': 'whether applicant chose boastful self-description for third self-promotion type',
     'app_eval_correct': 'number of application questions answered correctly by applicant',
     'bid': 'employer\'s wage bid for this applicant',
 }
@@ -217,7 +217,7 @@ value_labels = {
     'promote_type_seen': {
         1: 'first self-promotion type (1-6 scale)',
         2: 'second self-promotion type (0-100 agreement indicator)',
-        2: 'third self-promotion type (statement)',
+        3: 'third self-promotion type (statement)',
     },
     'app_promote1': self_eval_key,
 }
@@ -240,10 +240,12 @@ for i, row in df_app.iterrows():
         int(x == 'Female') for x in row['wage_guess_gender'].split('-')
     ]
     wage_guess = split_to_float(row['wage_guess_other'])
+    perform_guess = row['perform_guess_other'] if pd.isna(row['perform_guess_other']) else split_to_int(row['perform_guess_other'])
+    approp_guess = row['approp_guess_other'] if pd.isna(row['approp_guess_other']) else split_to_int(row['approp_guess_other'])
 
-    for performance_, promote_type_, promote1_, promote2_, promote3_, other_is_female_, wage_guess_ in zip(
+    for i, (performance_, promote_type_, promote1_, promote2_, promote3_, other_is_female_, wage_guess_) in enumerate(zip(
         other_performance, promote_type_seen, other_promote1, other_promote2, other_promote3, other_is_female, wage_guess
-    ):
+    )):
         wage_guesses.append({
             'guesser': i,
             'treatment': treatment,
@@ -252,10 +254,12 @@ for i, row in df_app.iterrows():
             'promote_type_seen': promote_type_,
             'other_promote1': promote1_,
             'other_promote2': promote2_,
-            'other_promote3_statement1': int(promote3_ == 1),
-            'other_promote3_statement2': int(promote3_ == 2),
+            'other_promote3_attentive': int(promote3_ == 1),
+            'other_promote3_boastful': int(promote3_ == 2),
             'other_eval_correct': performance_,
-            'wage_guess': wage_guess_
+            'wage_guess': wage_guess_,
+            'perform_guess': perform_guess[i] if isinstance(perform_guess, list) else perform_guess,
+            'approp_guess': approp_guess[i] + 1 if isinstance(approp_guess, list) else approp_guess,
         })
 
 df_guesses = pd.DataFrame(wage_guesses).set_index('guesser')
@@ -265,15 +269,17 @@ df_guesses.to_csv('applicant_wage_guesses.csv')
 
 variable_labels = {
     'treatment': 'treatment group for guesser',
-    'guesser_is_female': 'binary indicator for guesser\'s gender',
-    'other_is_female': 'binary indicator for other\'s gender',
+    'guesser_is_female': 'guesser\'s gender, 1 iff guesser is female',
+    'other_is_female': 'other\'s gender, 1 iff other is female',
     'promote_type_seen': 'the self-promotion type seen by the guesser in making this wage guess',
     'other_promote_1': 'other\'s choice for first self-promotion type',
     'other_promote_2': 'other\'s choice for second self-promotion type',
-    'other_promote_3_statement_1': 'binary indicator for whether other chose first self-promotion statement (attentive self-description) for third self-promotion type',
-    'other_promote_3_statement_2': 'binary indicator for whether other chose second self-promotion statement (self-description of being the best) for third self-promotion type',
+    'other_promote_3_attentive': 'whether other chose attentive self-description for third self-promotion type',
+    'other_promote_3_boastful': 'whether other chose boastful self-description for third self-promotion type',
     'other_eval_correct': 'number of application questions answered correctly by other',
-    'wage_guess': 'guesser\'s wage guess for the other',
+    'wage_guess': 'wage guess for the other',
+    'perform_guess': "guess of other's performance on the job performance questions",
+    "approp_guess": "guess of employers' evals of the social appropriateness of other's responses",
 }
 
 value_labels = {
@@ -285,9 +291,17 @@ value_labels = {
     'promote_type_seen': {
         1: 'first self-promotion type (1-6 scale)',
         2: 'second self-promotion type (0-100 agreement indicator)',
-        2: 'third self-promotion type (statement)',
+        3: 'third self-promotion type (statement)',
     },
     'other_promote1': self_eval_key,
+    'approp_guess': {
+        1: "Very socially inappropriate",
+        2: "Socially inappropriate",
+        3: "Somewhat socially inappropriate",
+        4: "Somewhat socially appropriate",
+        5: "Socially appropriate",
+        6: "Very socially appropriate",
+    }
 }
 
 df_guesses.to_stata('applicant_wage_guesses.dta', variable_labels = variable_labels, value_labels = value_labels)
@@ -306,8 +320,8 @@ df_app = df_app[[
     'avatar',
     'promote1',
     'promote2',
-    'promote3_statement1',
-    'promote3_statement2',
+    'promote3_attentive',
+    'promote3_boastful',
     'study_topic_guess',
     'male_avg_answers_guess',
     'female_avg_answers_guess',
@@ -338,8 +352,8 @@ value_labels = {
     'avatar': 'identifier for the gendered avatar assigned to the applicant',
     'promote_1': 'applicant\'s choice for first self-promotion type',
     'promote_2': 'applicant\'s choice for second self-promotion type',
-    'promote_3_statement_1': 'binary indicator for whether applicant chose first self-promotion statement (attentive self-description) for third self-promotion type',
-    'promote_3_statement_2': 'binary indicator for whether applicant chose second self-promotion statement (self-description of being the best) for third self-promotion type',
+    'promote_3_attentive': 'whether applicant chose attentive self-description for third self-promotion type',
+    'promote_3_boastful': 'whether applicant chose boastful self-description for third self-promotion type',
     'study_topic_guess': 'applicant\'s guess for the topic of the study',
     'male_avg_answers_guess': 'applicant\'s guess for average number of correctly answered job performance questions among all male applicants',
     'female_avg_answers_guess': 'applicant\'s guess for average number of correctly answered job performance questions among all female applicants',
@@ -415,10 +429,10 @@ value_labels = {
     'study_topic_guess': 'employer\'s guess for the topic of the study',
     'male_avg_answers_guess': 'employer\'s guess for average number of correctly answered job performance questions among all male applicants',
     'female_avg_answers_guess': 'employer\'s guess for average number of correctly answered job performance questions among all female applicants',
-    'exit_survey_female_avatar': 'identifier for hypothetical female avatar in exit survey',
-    'exit_survey_male_avatar': 'identifier for hypothetical male avatar in exit survey',
-    'exit_survey_perform': '(randomly generated) performance score for hypothetical applicants in exit survey',
-    'exit_survey_promote': '(randomly generated) self-promotion statement chosen by hypothetical applicants in exit survey',
+    'exit_survey_female_avatar': 'identifier for hypothetical female avatar used in exit survey',
+    'exit_survey_male_avatar': 'identifier for hypothetical male avatar used in exit survey',
+    'exit_survey_perform': '(randomly generated) performance score for hypothetical applicants in exit survey, out of 10, represents applicant\'s performance on application questions',
+    'exit_survey_promote': '(randomly generated) self-promotion statement chosen by hypothetical applicants in exit survey, represents applicant\'s choice for first self-promotion type',
     'male_enjoy_agree': 'employer\'s agreement with statement "I would enjoy working with him" about the hypothetical male applicant',
     'male_respect_agree': 'employer\'s agreement with statement "He would treat me with respect" about the hypothetical male applicant',
     'male_approachable_agree': 'employer\'s agreement with statement "He would be approachable for an issue that bothered me" about the hypothetical male applicant',
@@ -439,6 +453,7 @@ value_labels = {
         2: 'self-promotion and gender revealed',
         3: 'self-promotion, gender, and performance revealed',
     },
+    'exit_survey_promote': self_eval_key, 
     'male_enjoy_agree': agree_ratings_key,
     'male_respect_agree': agree_ratings_key,
     'male_approachable_agree': agree_ratings_key,
