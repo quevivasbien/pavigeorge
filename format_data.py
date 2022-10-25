@@ -163,6 +163,8 @@ for i, row in df_emp.iterrows():
     emp_is_female = int(row['gender'] == 'Female')
     applicants = row['applicants'].split('-')
     bids = split_to_float(row['bids'])
+    perform_guesses = split_to_int(row['perform_guesses'])
+    approp_rating = split_to_int(row['soc_approp_ratings'])
     for j, (applicant, bid) in enumerate(zip(applicants, bids)):
         try:
             app_row = df_app.loc[applicant]
@@ -182,7 +184,9 @@ for i, row in df_emp.iterrows():
             'app_promote3_attentive': app_row['promote3_attentive'],
             'app_promote3_boastful': app_row['promote3_boastful'],
             'app_eval_correct': app_row['eval_correct'],
-            'bid': bid
+            'bid': bid,
+            'perform_guess': perform_guesses[j],
+            'approp_rating': approp_rating[j] + 1,
         })
 
 df_bids = pd.DataFrame(bids_list).set_index('employer')
@@ -206,6 +210,8 @@ variable_labels = {
     'app_promote_3_boastful': 'whether applicant chose boastful self-description for third self-promotion type',
     'app_eval_correct': 'number of application questions answered correctly by applicant',
     'bid': 'employer\'s wage bid for this applicant',
+    'perform_guess': 'guess of applicant\'s performance on job performance questions, out of 10',
+    'approp_rating': 'rating of social appropriateness of applicant\'s application responses',
 }
 
 value_labels = {
@@ -220,6 +226,14 @@ value_labels = {
         3: 'third self-promotion type (statement)',
     },
     'app_promote1': self_eval_key,
+    'approp_rating': {
+        1: "Very socially inappropriate",
+        2: "Socially inappropriate",
+        3: "Somewhat socially inappropriate",
+        4: "Somewhat socially appropriate",
+        5: "Socially appropriate",
+        6: "Very socially appropriate",
+    }
 }
 
 df_bids.to_stata('employer_wage_bids.dta', variable_labels = variable_labels, value_labels = value_labels)
