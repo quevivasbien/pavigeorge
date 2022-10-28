@@ -247,7 +247,7 @@ for i, row in df_app.iterrows():
     guesser_is_female = int(row['gender'] == 'Female')
     other_performance = split_to_int(row['wage_guess_perform'])
     promote_type_seen = [x + 1 for x in split_to_int(row['wage_guess_promote_type'])]
-    other_promote1 = split_to_int(row['wage_guess_promote1'])
+    other_promote1 = [x + 1 for x in split_to_int(row['wage_guess_promote1'])]
     other_promote2 = split_to_int(row['wage_guess_promote2'])
     other_promote3 = [x + 1 for x in split_to_int(row['wage_guess_promote3'])]
     other_is_female = [
@@ -483,4 +483,5 @@ value_labels = {
 }
 
 df_emp.to_stata('employer_data_clean.dta', variable_labels = variable_labels, value_labels = value_labels)
+
 
