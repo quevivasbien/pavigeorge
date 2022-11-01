@@ -279,6 +279,37 @@ print(fitted.summary(
 ))
 
 # %%
+print("\ntest hypothesis 6 with first self-promotion type and female guessers only")
+print("expect to see other_promote1 > 0 and other_is_female*other_promote1 < 0")
+
+data = df_guesses[(df_guesses['treatment'] == 3) & (df_guesses['promote_type_seen'] == 1) & df_guesses['guesser_is_female']]
+X = sm.add_constant(
+    np.concatenate(
+        (
+            np.stack(
+                (
+                    data['other_promote1'],
+                    data['other_is_female'],
+                    data['other_is_female'] * data['other_promote1']
+                ),
+                axis=1
+            ),
+            pd.get_dummies(data['other_eval_correct']).to_numpy()[:, :-1]
+        ),
+        axis=1
+    )
+)
+fitted = sm.OLS(data['wage_guess'], X).fit(
+    cov_type='cluster', cov_kwds={'groups': data.index}
+)
+print(fitted.summary(
+    xname = (
+        ["const", "other_promote1", "other_is_female", "other_is_female*other_promote1"]
+        + [f"fe{i}" for i in range(X.shape[1] - 4)]
+    )
+))
+
+# %%
 print("\n\ntest hypothesis 6 with first self-promotion type and male guessers only")
 print("expect to see other_promote1 > 0 and other_is_female*other_promote1 < 0")
 
