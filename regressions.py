@@ -1,3 +1,5 @@
+## Meant to be run with `python regressions.py > regressions.txt`
+
 # %%
 import pandas as pd
 import numpy as np
@@ -115,7 +117,7 @@ print(fitted.summary(
 print('\n\ntest hypothesis 3 with second self-promotion type')
 print('expect to see app_promote2 > 0 and app_is_female*app_promote2 < 0')
 
-data = df_bids[(df_bids['treatment'] == 3) & (df_bids['promote_type_seen'] == 1)]
+data = df_bids[(df_bids['treatment'] == 3) & (df_bids['promote_type_seen'] == 2)]
 X = sm.add_constant(
     np.concatenate(
         (

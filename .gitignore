@@ -1,6 +1,5 @@
 *.csv
 *.dta
-*.txt
 *.png
 !applicant_data.csv
 !employer_data.csv
