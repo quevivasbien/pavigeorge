@@ -1,54 +1,61 @@
-## Meant to be run with `python presentation_tables.py > tables/tables.tex`
-
 # %%
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
+import re
 
 # %%
 df_bids = pd.read_csv('employer_wage_bids.csv', index_col='employer')
+df_bids['bid'] = df_bids['bid'] * 100
 df_guesses = pd.read_csv('applicant_wage_guesses.csv', index_col='guesser')
+df_guesses['wage_guess'] = df_guesses['wage_guess'] * 100
 df_app = pd.read_csv('applicant_data_clean.csv', index_col='applicant')
 
 # %%
-def make_table(fitted_models, title=None):
+def signif_level(pvalue):
+    if pvalue < 0.01:
+        return "***"
+    elif pvalue < 0.05:
+        return "**"
+    elif pvalue < 0.1:
+        return "*"
+    else:
+        return ""
+
+def make_table(fitted_models, title=None, notes=None, colwidth=8):
     tables = []
     for name, fitted in fitted_models.items():
         tables.append(
             pd.DataFrame(
-                np.stack((fitted.params, fitted.bse, fitted.pvalues), axis=1),
+                [
+                    rf"\shortstack{{{param:.3g} ({bse:.2g}){signif_level(p)}}}"
+                    for param, bse, p in zip(fitted.params, fitted.bse, fitted.pvalues)
+                ],
                 index=fitted.params.index,
-                columns = pd.MultiIndex.from_arrays([
-                    [name, name, name],
-                    ['coef.', '(s.e.)', 'p']
-                ]),
+                columns = [name.replace('+', r'\newline +').replace('*', r'$^\dagger$')],
             )
         )
     df = pd.concat(tables, axis=1)
     df = df.loc[[i for i in df.index if not i.startswith('fe')]]
     sty = df.style.format(
-        subset=pd.IndexSlice[:, pd.IndexSlice[:, 'coef.']],
-        formatter=lambda x: f'{x:.2g}',
-        na_rep = ''
-    ).format(
-        subset=pd.IndexSlice[:, pd.IndexSlice[:, '(s.e.)']],
-        formatter=lambda x: f'({x:.2g})',
-        na_rep = ''
-    ).format(
-        subset=pd.IndexSlice[:, pd.IndexSlice[:, 'p']],
-        formatter=lambda x: f'{x:.2f}',
         na_rep = ''
     ).format_index(
         escape="latex", axis=0
     )
     
-    return sty.to_latex(
-        column_format = 'l' + '|'.join(['rlc']*len(fitted_models)),
-        multicol_align='p{12em}',
+    ncols = len(fitted_models)
+    tab = sty.to_latex(
+        column_format = 'l' + f'p{{{colwidth}em}}'*ncols,
         hrules = True,
         caption = title,
         position_float='centering',
     )
+
+    if notes is not None:
+        tab = re.sub(
+            r'(?=\n\\end{tabular})',
+            "\n" + rf'\\multicolumn{{{ncols}}}{{p{{{10 + 5 * ncols}em}}}}{{\\textit{{Notes}}: ' + r' \\newline\\quad '.join(notes) + '}', tab)
+    return tab
 
 # %%
 def hyp1_3_table(promote_type = 1):
@@ -58,7 +65,7 @@ def hyp1_3_table(promote_type = 1):
     X = sm.add_constant(
         data[f'app_promote{promote_type}']
     )
-    X.columns=['const', 'Self-promotion']
+    X.columns=['const', 'Self-evaluation']
 
     fitted1 = sm.OLS(data['bid'], X).fit(
         cov_type='cluster', cov_kwds={'groups': data.index}
@@ -117,10 +124,11 @@ def hyp1_3_table(promote_type = 1):
     return make_table(
         {
             'Self-evaluation': fitted1,
-            'Self-evaluation + gender': fitted2,
-            'Self-evaluation + gender + performance*': fitted3
+            r'Self-evaluation + gender': fitted2,
+            r'Self-evaluation + gender + performance*': fitted3
         },
         title = f'Employer bids, with {"first" if promote_type == 1 else "second"} self-evaluation type',
+        notes = ['*$p<0.1$, **$p<0.05$, ***$p<0.01$.', 'Standard errors clustered by employer.', '(†) indicates inclusion of performance fixed effects.']
     )
     
 
@@ -160,6 +168,7 @@ def hyp7_table(promote_type=1):
             'Self-evaluation + gender + performance*': fits[3]
         },
         title = f'Applicant self-evaluation, with {"first" if promote_type == 1 else "second"} self-evaluation type',
+        notes = ['*$p<0.1$, **$p<0.05$, ***$p<0.01$.', 'Standard errors clustered by applicant.', '(†) indicates inclusion of performance fixed effects.'],
     )
 
 # %%
@@ -192,10 +201,11 @@ def hyp4_fit(promote_type=1):
 def hyp4_table():
     return make_table(
         {
-            'First self-promotion type': hyp4_fit(1),
-            'Second self-promotion type': hyp4_fit(2),
+            r'Second \newline self-evaluation type': hyp4_fit(2),
         },
-        title = 'Wage guesses (self-evaluation-only treatment)'
+        title = 'Wage guesses (self-evaluation-only treatment)',
+        notes = ['*$p<0.1$, **$p<0.05$, ***$p<0.01$.', 'Standard errors clustered by guesser.',],
+        colwidth = 12,
     )
 
 # %%
@@ -258,6 +268,7 @@ def hyp5_6_table(female = 1, promote_type = 1):
             'Self-evaluation + gender + performance*': fitted2
         },
         title = f'Wage guesses, with {"first" if promote_type == 1 else "second"} self-evaluation type and {"female" if female == 1 else "male"} guessers only',
+        notes = ['*$p<0.1$, **$p<0.05$, ***$p<0.01$.', 'Standard errors clustered by guesser.', '(†) indicates inclusion of performance fixed effects.'],
     )
 
 # %%
@@ -272,9 +283,5 @@ print(hyp5_6_table(0, 1))
 # %%
 print(hyp5_6_table(0, 2))
 
-
-# %%
-print('\n(*) Includes fixed effects on performance')
-print('\nStandard errors robust to clustering')
 
 
