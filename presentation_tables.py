@@ -52,9 +52,10 @@ def make_table(fitted_models, title=None, notes=None, colwidth=8):
     )
 
     if notes is not None:
+        maxlen = max(len(note) for note in notes)
         tab = re.sub(
             r'(?=\n\\end{tabular})',
-            "\n" + rf'\\multicolumn{{{ncols}}}{{p{{{10 + 5 * ncols}em}}}}{{\\textit{{Notes}}: ' + r' \\newline\\quad '.join(notes) + '}', tab)
+            "\n" + rf'\\multicolumn{{{ncols}}}{{p{{{max(maxlen + 6, colwidth*ncols)}ex}}}}{{\\textit{{Notes}}: ' + r' \\newline\\quad '.join(notes) + '}', tab)
     return tab
 
 # %%
