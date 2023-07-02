@@ -242,7 +242,7 @@ df_bids.to_stata('employer_wage_bids.dta', variable_labels = variable_labels, va
 # create df of applicant wage guesses
 wage_guesses = []
 
-for i, row in df_app.iterrows():
+for app_id, row in df_app.iterrows():
     treatment = row['treatment']
     guesser_is_female = int(row['gender'] == 'Female')
     other_performance = split_to_int(row['wage_guess_perform'])
@@ -261,7 +261,7 @@ for i, row in df_app.iterrows():
         other_performance, promote_type_seen, other_promote1, other_promote2, other_promote3, other_is_female, wage_guess
     )):
         wage_guesses.append({
-            'guesser': i,
+            'guesser': app_id,
             'treatment': treatment,
             'guesser_is_female': guesser_is_female,
             'other_is_female': other_is_female_,
